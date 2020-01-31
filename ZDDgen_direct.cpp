@@ -1,6 +1,3 @@
-//g++ -o CNFtoZBDD9 CNFtoZBDD9.cpp -I /home/vsk/Diagrams/cudd-3.0.0 -I /home/vsk/Diagrams/cudd-3.0.0/util -I /home/vsk/Diagrams/cudd-3.0.0/cudd /home/vsk/Diagrams/cudd-3.0.0/cudd/.libs/libcudd.a /home/vsk/Diagrams/cudd-3.0.0/dddmp/.libs/libdddmp.a
-
-
 #include <stdio.h>
 #include <vector>
 #include <iostream>
@@ -21,8 +18,6 @@
 /* Files included from CUDD package */
 #include "/home/vsk/Diagrams/cudd-3.0.0/util/util.h"
 #include "/home/vsk/Diagrams/cudd-3.0.0/cudd/cudd.h"
-//#include "util.h"
-//#include "util.h"
 
 static bool abs_compare(int a, int b)
 {
@@ -67,10 +62,6 @@ void SplitStringIntoVector (const std::string& line, std::vector<int>& learnt){
 }
 
 
-//   Use De Morgan rule: every disjuct its a not(not(x1) + not(x2) + not(x3)+....+not(xn)), 
-//   so we can use Cudd_zddIntersect for this representation
-
-
 int main (int argc, char *argv[])
 {
     std::cout << " Start " <<std::endl;
@@ -90,7 +81,6 @@ int main (int argc, char *argv[])
     std::string inputfilename;
     int maxvar = 0;
     int max_lit;
-    //string outfilename;
     std::vector<int> learnt;
     std::vector<int> learntemp;
     int litcount = 0;
@@ -107,7 +97,6 @@ int main (int argc, char *argv[])
     }else{
       inputfilename = "test.cnf";
     }
-    //outfilename = "out_"+filename;
     std::cout << " CNF " << inputfilename <<std::endl;
 
     std::ifstream file(inputfilename.c_str(), std::ios::in);
@@ -125,7 +114,6 @@ int main (int argc, char *argv[])
       if (line[0] != 'c' && line[0] != 'p' )
       {
       	SplitStringIntoVector(line,learnt);
-      	//std::cout << " Count of literals: " << litcount <<std::endl;
       	if(!learnt.empty())
       	{
         	for (int i = 0; i < learnt.size(); ++i)
@@ -143,17 +131,12 @@ int main (int argc, char *argv[])
     }
     file.close();
 
-    //std::cout << " CNF into vector complete " <<std::endl;
     std::cout << " Count of literals: " << litcount <<std::endl;
     std::cout << " Maximum number of x: " << maxvar << std::endl;
     std::cout << " Count of disjuncts: " << learnts.size() <<std::endl;
     std::cout << " ZDD start " <<std::endl;
 
 
-    //std::vector<DdNode *> clause (learnts.size());
-    //zdd = Cudd_ReadZddOne(gbm,0); //Returns the logic one constant of the manager
-    //Cudd_Ref(zdd); //Increases the reference count of a node
-    //Cudd_DisableGarbageCollection(gbm);
     std::vector<clock_t> clausetime (learnts.size());
 
 
@@ -185,22 +168,18 @@ int main (int argc, char *argv[])
 
     for (int i = 0; i < learnts.size(); ++i)
     {
-      //std::cout << " Start renaming dizjunct " << i << std::endl;
       for (int j = 0; j < learnts[i].size(); ++j)
       {
-        //std::cout << " Start renaming literal " << j << std::endl;
         for (int k = 0; k < mapvars.size(); ++k)
         {
           if (abs(learnts[i][j]) == mapvars[k].second)
           {
-            //std::cout << " Previous literal " << sets[i][j] << " ";
             if (learnts[i][j]>0)
             {
               learnts[i][j] = mapvars[k].first;
             }else{
               learnts[i][j] = (-1)*mapvars[k].first;
             }
-            //std::cout << " new literal " << sets[i][j] << std::endl;
             break;
           }
         }
@@ -214,11 +193,10 @@ int main (int argc, char *argv[])
       {
         if (learnts[j][i]>0)
         {
-          learntemp.push_back((2*learnts[j][i]));
+          learntemp.push_back((2*learnts[j][i])-1);
         }else{
-          learntemp.push_back(((-2)*learnts[j][i])-1);
+          learntemp.push_back(((-2)*learnts[j][i]));
         }
-        //std::cout << " " << learnts[j][i];
       }
       
       for (int i = 1; i <= 2*mapvars.size(); i++){  //literal addition
@@ -270,7 +248,6 @@ int main (int argc, char *argv[])
       }
       while (clauseq.size()>1)
       {
-      	//const auto start_building_time = std::chrono::system_clock::now();
         var1 = clauseq.front();
         clauseq.pop();
         var2 = clauseq.front();
@@ -278,36 +255,24 @@ int main (int argc, char *argv[])
         Cudd_Ref(clause);
         clauseq.pop();
         clauseq.push(clause);
-        //const auto finish_building_time = std::chrono::system_clock::now();
-        //const double generation_time = std::chrono::duration_cast<std::chrono::microseconds>(finish_building_time - start_building_time).count();
-        //std::cout << " Time taken for " << i << " intersection: " << (double)(clock() - intertime)/CLOCKS_PER_SEC << std::endl;
-        //std::cout << " Time taken for " << i << " intersection: " << generation_time << std::endl;
       }
       clausetime[j] = clock() - clausestart;
       clausetotal += clausetime[j];
-      //std::cout << " Start additing clause[" << j << "] to zdd" << std::endl;
-      //std::cout << j+1 << " of " << clause.size() << std::endl;
       unionstart = clock();
       if (j == 0)
       {
         zdd = clauseq.front();
         clauseq.pop();
         Cudd_Ref(zdd);
-        //Cudd_RecursiveDerefZdd(gbm,clause);
       }else{
-        //Cudd_RecursiveDerefZdd(gbm,tmp);
         zdd = Cudd_zddUnion(gbm, clauseq.front(), zdd);
         clauseq.pop();
         Cudd_Ref(zdd);
-        //std::cout << " 6" << std::endl;
       }
       unionend = clock();
       uniontotal += unionend - unionstart;
     }
-    //tmp = Cudd_zddDiff(gbm,Cudd_ReadZddOne(gbm,0),zdd);
-    //Cudd_RecursiveDerefZdd(gbm,tmp);
     tzddend = clock();
-    //tzddtotal = tzddend - tzddstart;
     std::string outfilename = "./zdd/out_" + inputfilename;
     for (int i = 0; i < 3; ++i)
     {
@@ -318,11 +283,6 @@ int main (int argc, char *argv[])
     outfilename.copy(filename,outfilename.size()+1);
     filename[outfilename.size()] = '\0';
 
-/*
-    for (int i = 0; i < clausetime.size(); ++i)
-    {
-      std::cout << "Time taken for conjuction of " << i << " subset is: " << (double)clausetime[i]/CLOCKS_PER_SEC << std::endl;
-    }*/
     printf("Time taken for creating zdd variables: %.2fs\n", (double)(crnegzddvarsstart - crzddvarsstart)/CLOCKS_PER_SEC);
     printf("Time taken for cumputing complements of zdd variables: %.2fs\n", (double)(crzddvarsend - crnegzddvarsstart)/CLOCKS_PER_SEC);
     printf("Time taken for conjunction of all subsets: %.2fs\n", (double)(clausetotal)/CLOCKS_PER_SEC);
@@ -337,7 +297,6 @@ int main (int argc, char *argv[])
     //sprintf(filename, "./zdd/graph.dot"); /*Write .dot filename to a string*/
     write_dd(gbm, zdd, filename);  /*Write the resulting cascade dd to a file*/
     Cudd_Quit(gbm);
-    //printf("Time taken for zdd prep (first set): %.2fs\n", (double)(tzddprepend - tzddprepstart)/CLOCKS_PER_SEC);
     printf("Time taken for zdd: %.2fs\n", (double)(tzddend - tzddstart)/CLOCKS_PER_SEC);
     printf("Time taken: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
     return 0; 
